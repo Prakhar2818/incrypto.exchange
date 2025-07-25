@@ -9,7 +9,7 @@ import { getAllSymbolDataByDate, getSymbolDataByDate, getAllDates } from './symb
 import { getDeltaSymbolData, storeDeltaSymbolData, getAllDeltaSymbols } from './deltaSymbolStore.js';
 import config from '../config/index.js';
 
-const userSubscriptions = new Map(); // Map<userId, Map<category, Set<symbol>>>
+export const userSubscriptions = new Map(); // Map<userId, Map<category, Set<symbol>>>
 
 function getSymbolsForOptionChain(currency, date) {
   const symbolMap = getAllSymbolDataByDate(currency, date);
