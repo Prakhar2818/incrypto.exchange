@@ -26,19 +26,11 @@ export async function checkDynamoConnection() {
     const command = new ListTablesCommand({});
     const response = await dynamoClient.send(command);
     console.log("✅ DynamoDB Connected. Tables:", response.TableNames);
-  } catch (err) {
     console.error("❌ DynamoDB connection failed:", err);
   }
-}
 checkDynamoConnection();
 
-
-export async function handleSubscribe1(req, res) {
-  const { userId, category } = req.body;
-  const ws = req.app.get("positionConnections").get(userId);
-
-  if (!ws || ws.readyState !== 1) {
-    return res.status(400).send("User WebSocket not connected");
+checkDynamoConnection();
   }
 
   const catMap = userSubscriptions.get(userId) || new Map();
@@ -52,14 +44,6 @@ export async function handleSubscribe1(req, res) {
       ":uid": { S: userId },
     },
   });
-
-  let allPositions = [];
-  try {
-    const { Items } = await dynamoClient.send(dynamoCommand);
-    if (!Items || !Items.length) return res.status(400).send("No data found.");
-    allPositions = Items.map((item) => unmarshall(item));
-  } catch (err) {
-    return res.status(500).send("Failed to fetch positions");
   }
 
   // Only open positions are used for symbol registration
@@ -75,7 +59,6 @@ export async function handleSubscribe1(req, res) {
   catMap.set(category, symbolSet);
 
   // ✅ ALSO register futures symbols under "futures" category
-  const futuresSet = catMap.get("futures") || new Set();
   openPositions.forEach((pos) => {
     if (isFuturesSymbol(pos.assetSymbol)) {
       futuresSet.add(normalizeToBinanceSymbol(pos.assetSymbol));
@@ -101,6 +84,29 @@ export async function broadcastAllPositions(positionConnections, userId, categor
   const todayStart = now.set({ hour: 5, minute: 30, second: 0, millisecond: 0 });
   const todayEnd = todayStart.plus({ hours: 24 });
 
+  // Check if DynamoDB is connected
+  if (!dynamoConnected) {
+    console.warn("⚠️ DynamoDB not connected, using mock data for broadcast");
+    // Send empty positions data
+    const emptyPayload = {
+      type: "positions",
+      data: {
+        open: [],
+        closed: [],
+        summary: {
+          openPNL: 0,
+          openPNLPercentage: 0,
+          closedPNL: 0,
+          closedPNLPercentage: 0,
+          totalPNL: 0,
+          totalPNLPercentage: 0
+        }
+      }
+    };
+    ws.send(JSON.stringify(emptyPayload));
+    return;
+  }
+
   const dynamoCommand = new QueryCommand({
     TableName: "incrypto-dev-positions",
     IndexName: "UserIndex",
@@ -116,6 +122,24 @@ export async function broadcastAllPositions(positionConnections, userId, categor
     allUserPositions = (Items || []).map((item) => unmarshall(item));
   } catch (err) {
     console.error("❌ Failed to fetch user positions:", err);
+    // Send empty positions data on error
+    const errorPayload = {
+      type: "positions",
+      error: "Failed to fetch positions",
+      data: {
+        open: [],
+        closed: [],
+        summary: {
+          openPNL: 0,
+          openPNLPercentage: 0,
+          closedPNL: 0,
+          closedPNLPercentage: 0,
+          totalPNL: 0,
+          totalPNLPercentage: 0
+        }
+      }
+    };
+    ws.send(JSON.stringify(errorPayload));
     return;
   }
 
@@ -331,6 +355,14 @@ export async function triggerPNLUpdate(req, res) {
   const catMap = userSubscriptions.get(userId) || new Map();
   userSubscriptions.set(userId, catMap);
 
+  // Check if DynamoDB is connected
+  if (!dynamoConnected) {
+    console.warn("⚠️ DynamoDB not connected, using mock data for PNL update");
+    // Trigger broadcast with empty data
+    broadcastAllPositions(req.app.get("positionConnections"), userId, category);
+    return res.send("PnL Update Triggered (DynamoDB not available)");
+  }
+
   const dynamoCommand = new QueryCommand({
     TableName: "incrypto-dev-positions",
     IndexName: "UserIndex",
@@ -347,6 +379,7 @@ export async function triggerPNLUpdate(req, res) {
     userPositions = Items.map((item) => unmarshall(item)).filter((pos) => pos.status === 'OPEN');
     userActivePositions.set(userId, userPositions);
   } catch (err) {
+    console.error("❌ Error fetching positions for PNL update:", err);
     return res.status(500).send("Failed to fetch positions");
   }
 
