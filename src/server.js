@@ -174,7 +174,3 @@ if (!initialized) {
 // Note: WebSocket server is not supported in Vercel serverless functions.
 // You may need to move WebSocket handling to a separate service or use a different platform.
 
-// Export the Express app as a Vercel serverless function handler
-export default function handler(req, res) {
-  return app(req, res);
-};
