@@ -172,4 +172,12 @@ if (!initialized) {
 }
 
 
-export { userConnections, positionConnections, orderTrackingConnections };
+function handler(req, res) {
+  return app(req, res);
+}
+
+handler.userConnections = userConnections;
+handler.positionConnections = positionConnections;
+handler.orderTrackingConnections = orderTrackingConnections;
+
+export default handler;
