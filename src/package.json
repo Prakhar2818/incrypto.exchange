@@ -8,7 +8,7 @@
     "dev": "nodemon server.js",
     "logs": "tail -f logs.txt",
     "deploy": "vercel deploy --prod",
-    "build": "echo 'No build step required'"
+    "build": "react-scripts build"
   },
   "keywords": [],
   "author": "",
