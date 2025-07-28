@@ -25,52 +25,80 @@ export async function checkDynamoConnection() {
     const command = new ListTablesCommand({});
     const response = await dynamoClient.send(command);
     console.log("✅ DynamoDB Connected. Tables:", response.TableNames);
-    console.error("❌ DynamoDB connection failed:", err);
+    return true;
   } catch (err) {
     console.error("❌ DynamoDB connection failed:", err);
+    return false;
   }
 }
-checkDynamoConnection();
 
-const catMap = userSubscriptions.get(userId) || new Map();
-userSubscriptions.set(userId, catMap);
-
-const dynamoCommand = new QueryCommand({
-  TableName: "incrypto-dev-positions",
-  IndexName: "UserIndex",
-  KeyConditionExpression: "userId = :uid",
-  ExpressionAttributeValues: {
-    ":uid": { S: userId },
-  },
+// Initialize connection check but don't block startup
+let dynamoConnected = false;
+checkDynamoConnection().then(result => {
+  dynamoConnected = result;
 });
 
-// Only open positions are used for symbol registration
-const openPositions = allPositions.filter((pos) => pos.status === "OPEN");
+export async function handleSubscribe1(req, res) {
+  const { userId, category } = req.body;
+  if (!userId) return res.status(400).send("Missing userId");
+  if (!category) return res.status(400).send("Missing category");
 
-const symbols = openPositions.map((pos) => pos.assetSymbol).filter(Boolean);
-if (!symbols.length)
-  return res.status(400).send("No active asset symbols found");
-
-// ✅ Register current category symbols
-const symbolSet = catMap.get(category) || new Set();
-symbols.forEach((symbol) => symbolSet.add(normalizeToBinanceSymbol(symbol)));
-catMap.set(category, symbolSet);
-
-// ✅ ALSO register futures symbols under "futures" category
-openPositions.forEach((pos) => {
-  if (isFuturesSymbol(pos.assetSymbol)) {
-    futuresSet.add(normalizeToBinanceSymbol(pos.assetSymbol));
+  // Check if DynamoDB is connected
+  if (!dynamoConnected) {
+    console.warn("⚠️ DynamoDB not connected, cannot fetch positions");
+    return res.status(503).send("DynamoDB service unavailable");
   }
-});
-catMap.set("futures", futuresSet);
 
-// ✅ Final update to subscription map
-userSubscriptions.set(userId, catMap);
+  const catMap = userSubscriptions.get(userId) || new Map();
+  userSubscriptions.set(userId, catMap);
 
-// 🚀 Trigger position broadcast with full logic
-broadcastAllPositions(req.app.get("positionConnections"), userId, category);
+  const dynamoCommand = new QueryCommand({
+    TableName: "incrypto-dev-positions",
+    IndexName: "UserIndex",
+    KeyConditionExpression: "userId = :uid",
+    ExpressionAttributeValues: {
+      ":uid": { S: userId },
+    },
+  });
 
-res.send(`Subscribed to ${symbols.length} symbols for user ${userId}`);
+  let allPositions = [];
+  try {
+    const { Items } = await dynamoClient.send(dynamoCommand);
+    allPositions = (Items || []).map((item) => unmarshall(item));
+  } catch (err) {
+    console.error("❌ Failed to fetch user positions:", err);
+    return res.status(500).send("Failed to fetch positions");
+  }
+
+  // Only open positions are used for symbol registration
+  const openPositions = allPositions.filter((pos) => pos.status === "OPEN");
+
+  const symbols = openPositions.map((pos) => pos.assetSymbol).filter(Boolean);
+  if (!symbols.length)
+    return res.status(400).send("No active asset symbols found");
+
+  // ✅ Register current category symbols
+  const symbolSet = catMap.get(category) || new Set();
+  symbols.forEach((symbol) => symbolSet.add(normalizeToBinanceSymbol(symbol)));
+  catMap.set(category, symbolSet);
+
+  // ✅ ALSO register futures symbols under "futures" category
+  const futuresSet = catMap.get("futures") || new Set();
+  openPositions.forEach((pos) => {
+    if (isFuturesSymbol(pos.assetSymbol)) {
+      futuresSet.add(normalizeToBinanceSymbol(pos.assetSymbol));
+    }
+  });
+  catMap.set("futures", futuresSet);
+
+  // ✅ Final update to subscription map
+  userSubscriptions.set(userId, catMap);
+
+  // 🚀 Trigger position broadcast with full logic
+  broadcastAllPositions(req.app.get("positionConnections"), userId, category);
+
+  res.send(`Subscribed to ${symbols.length} symbols for user ${userId}`);
+}
 
 export async function broadcastAllPositions(
   positionConnections,
@@ -330,6 +358,12 @@ function isTodayCustom(timestamp) {
 }
 
 async function getUserBankBalance(userId) {
+  // Check if DynamoDB is connected
+  if (!dynamoConnected) {
+    console.warn("⚠️ DynamoDB not connected, returning default bank balance");
+    return 0;
+  }
+
   const cmd = new QueryCommand({
     TableName: "incrypto-dev-funds",
     KeyConditionExpression: "userId = :uid",
