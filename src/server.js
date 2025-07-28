@@ -17,7 +17,12 @@ import { ensureDir } from './utils/fileUtils.js';
 dotenv.config();
 
 const app = express();
-app.use(cors());
+// Allow all CORS origins
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(bodyParser.json());
 
 // Create connections before using them
