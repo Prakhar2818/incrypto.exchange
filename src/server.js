@@ -13,23 +13,25 @@ import { clearCSVs } from './utils/fileUtils.js';
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
+import { ensureDir } from './utils/fileUtils.js';
 dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-app.use('/', userWsRouter);
+// Create connections before using them
+export const userConnections = new Map();
+export const positionConnections = new Map();
+export const orderTrackingConnections = new Set();
 
-import { ensureDir } from './utils/fileUtils.js';
-
-const userConnections = new Map();
-const positionConnections = new Map();
-const orderTrackingConnections = new Set();
-
+// Set them in the app for middleware access
 app.set('userConnections', userConnections);
 app.set('positionConnections', positionConnections);
 app.set('orderTrackingConnections', orderTrackingConnections);
+
+// Use router after setting up connections
+app.use('/', userWsRouter);
 
 async function initializeSymbolAndWebSocket() {
   try {
@@ -61,12 +63,14 @@ if (!initialized) {
 }
 
 
-function handler(req, res) {
-  return app(req, res);
-}
+// Create HTTP server
+const server = http.createServer(app);
 
-handler.userConnections = userConnections;
-handler.positionConnections = positionConnections;
-handler.orderTrackingConnections = orderTrackingConnections;
+// Start the server
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
-export default handler;
+// Export the app for potential serverless environments
+export default app;
