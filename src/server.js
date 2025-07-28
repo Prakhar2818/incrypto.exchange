@@ -146,11 +146,18 @@ app.set('positionConnections', positionConnections);
 app.set('orderTrackingConnections', orderTrackingConnections);
 
 // Function to initialize symbol and WebSocket logic for each category
+import { ensureDir } from './utils/fileUtils.js';
+
 async function initializeSymbolAndWebSocket() {
   try {
     console.log('🧹 Clearing CSV files...');
-    const csvFolderPath = path.resolve('./data');
-    clearCSVs(csvFolderPath);
+    const csvFolderPath = path.resolve('/tmp/data');
+    ensureDir(csvFolderPath);
+    try {
+      clearCSVs(csvFolderPath);
+    } catch (err) {
+      console.error('❌ Error clearing CSV files:', err);
+    }
 
     console.log('🚀 Starting Deribit Symbol Service...');
     for (const currency of config.currencies) {
