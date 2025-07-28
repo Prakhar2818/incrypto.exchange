@@ -132,10 +132,7 @@ app.use(bodyParser.json());
 
 app.use('/', userWsRouter);
 
-const server = http.createServer(app);
-const wss = new WebSocketServer({ noServer: true });
-const positionWss = new WebSocketServer({ noServer: true });
-const orderTrackingWss = new WebSocketServer({ noServer: true });
+import { ensureDir } from './utils/fileUtils.js';
 
 const userConnections = new Map();
 const positionConnections = new Map();
@@ -144,9 +141,6 @@ const orderTrackingConnections = new Set();
 app.set('userConnections', userConnections);
 app.set('positionConnections', positionConnections);
 app.set('orderTrackingConnections', orderTrackingConnections);
-
-// Function to initialize symbol and WebSocket logic for each category
-import { ensureDir } from './utils/fileUtils.js';
 
 async function initializeSymbolAndWebSocket() {
   try {
@@ -171,71 +165,16 @@ async function initializeSymbolAndWebSocket() {
   }
 }
 
-// Initial startup
-initializeSymbolAndWebSocket();
+let initialized = false;
+if (!initialized) {
+  initializeSymbolAndWebSocket();
+  initialized = true;
+}
 
-// WebSocket upgrade handling
-server.on('upgrade', (req, socket, head) => {
-  const url = new URL(req.url, `http://${req.headers.host}`);
-  const userId = url.searchParams.get('userId');
-  const category = url.searchParams.get('category');
+// Note: WebSocket server is not supported in Vercel serverless functions.
+// You may need to move WebSocket handling to a separate service or use a different platform.
 
-  if (!category) return socket.destroy();
-
-  if (category === 'position') {
-    if (!userId) return socket.destroy();
-    positionWss.handleUpgrade(req, socket, head, (ws) => {
-      positionConnections.set(userId, ws);
-      console.log(`🔗 [Position - User ${userId}] WebSocket connected`);
-
-      ws.on('close', () => {
-        positionConnections.delete(userId);
-        console.log(`❌ [Position - User ${userId}] WebSocket closed`);
-      });
-    });
-  } else if (category === 'ordertracking') {
-    orderTrackingWss.handleUpgrade(req, socket, head, (ws) => {
-      orderTrackingConnections.add(ws);
-      console.log('🔗 [OrderTracking] WebSocket connected');
-
-      ws.on('close', () => {
-        orderTrackingConnections.delete(ws);
-        console.log('❌ [OrderTracking] WebSocket closed');
-      });
-    });
-  } else {
-    if (!userId) return socket.destroy();
-    wss.handleUpgrade(req, socket, head, (ws) => {
-      userConnections.set(userId, ws);
-      console.log(`🔗 [User ${userId}] WebSocket connected`);
-
-      ws.on('close', () => {
-        userConnections.delete(userId);
-        console.log(`❌ [User ${userId}] WebSocket closed`);
-      });
-    });
-  }
-});
-
-// 🔁 Restart endpoint
-app.post('/restart-server', async (req, res) => {
-  try {
-    console.log('♻️ Restart requested via API');
-    // process.exit(1); // Trigger PM2 or EC2 restart policy
-
-    setTimeout(() => {
-      process.exit(1); // Trigger restart via PM2
-    }, 2000);
-  } catch (err) {
-    console.error('❌ Restart failed:', err);
-    res.status(500).json({ error: 'Failed to restart server' });
-  }
-});
-
-server.listen(3000, () => {
-  console.log('🚀 Server running on http://localhost:3000');
-});
-
-export { userConnections };
-export { positionConnections };
-export { orderTrackingConnections };
+// Export the Express app as a Vercel serverless function handler
+export default function handler(req, res) {
+  return app(req, res);
+};
