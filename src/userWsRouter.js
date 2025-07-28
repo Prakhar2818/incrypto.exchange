@@ -1,10 +1,35 @@
 import express from 'express';
 import { handleSubscribe, handleUnsubscribe, handleCancelWs } from './services/userStreamHandler.js';
-import { handleSubscribe1,handleUnsubscribe2,handleCancelPositionWs,triggerPNLUpdate} from './services/subscriptionHandler.js';
+import { handleSubscribe1,handleUnsubscribe2,handleCancelPositionWs,triggerPNLUpdate, checkDynamoConnection } from './services/subscriptionHandler.js';
 import { getDatesByCurrency } from './services/symbolStore.js';
 import { subscribeSymbol,unsubscribeSymbol, cancelOrderTrackingWss } from './services/orderTrackingHandlers.js';
 
 const router = express.Router();
+
+// Root endpoint for basic API information
+router.get('/', (req, res) => {
+  res.json({
+    name: 'Deribit Live Stream API',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: [
+      { path: '/', method: 'GET', description: 'API information' },
+      { path: '/status', method: 'GET', description: 'Server status and connections' },
+      { path: '/subscribe', method: 'POST', description: 'Subscribe to user stream' },
+      { path: '/unsubscribe', method: 'POST', description: 'Unsubscribe from user stream' },
+      { path: '/cancel-ws', method: 'POST', description: 'Cancel WebSocket connection' },
+      { path: '/external-subscribe', method: 'POST', description: 'Subscribe to external data' },
+      { path: '/external-unsubscribe', method: 'POST', description: 'Unsubscribe from external data' },
+      { path: '/cancel-position-ws', method: 'POST', description: 'Cancel position WebSocket' },
+      { path: '/get-subscribe', method: 'POST', description: 'Subscribe to order tracking' },
+      { path: '/get-unsubscribe', method: 'POST', description: 'Unsubscribe from order tracking' },
+      { path: '/cancel-ordertracking-ws', method: 'POST', description: 'Cancel order tracking WebSocket' },
+      { path: '/dates', method: 'POST', description: 'Get available dates by currency' },
+      { path: '/triggerPNLUpdate', method: 'POST', description: 'Trigger PNL update' },
+      { path: '/symbol-mark-prices', method: 'POST', description: 'Get symbol mark prices' }
+    ]
+  });
+});
 
 router.post('/subscribe', handleSubscribe);
 router.post('/unsubscribe', handleUnsubscribe);
@@ -34,6 +59,24 @@ router.post('/dates', (req, res) => {
   });
 
 router.post('/triggerPNLUpdate',triggerPNLUpdate)
+
+// Status endpoint to check server health
+router.get('/status', async (req, res) => {
+  const dynamoStatus = await checkDynamoConnection();
+  
+  const status = {
+    server: 'running',
+    time: new Date().toISOString(),
+    dynamodb: dynamoStatus ? 'connected' : 'disconnected',
+    connections: {
+      user: req.app.get('userConnections').size,
+      position: req.app.get('positionConnections').size,
+      orderTracking: req.app.get('orderTrackingConnections').size
+    }
+  };
+  
+  res.json(status);
+});
 
 
 import { isFuturesSymbol, isOptionSymbol, getCurrencyAndDateFromSymbol } from './utils/symbolUtils.js';

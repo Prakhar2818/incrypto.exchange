@@ -88,13 +88,10 @@ function attemptReconnect() {
 
 export async function startDeltaWebSocket() {
   try {
-    console.log("🔄 Starting Delta WebSocket...");
     subscribedSymbols = await readSymbolsFromCSV('./symbol_csvs/symbols.csv');
     setupWebSocketConnection();
-    return true;
   } catch (error) {
     console.error("❌ Failed to start Delta WebSocket:", error);
-    return false;
   }
 }
 
