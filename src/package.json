@@ -3,13 +3,14 @@
   "version": "1.0.0",
   "description": "",
   "main": "server.js",
-  "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
-    "logs": "tail -f logs.txt",
-    "deploy": "vercel deploy --prod",
-    "build": "react-scripts build"
-  },
+"scripts": {
+  "start": "node server.js",
+  "dev": "nodemon server.js",
+  "logs": "tail -f logs.txt",
+  "deploy": "vercel deploy --prod",
+  "build": "echo 'No build step required'"
+},
+
   "keywords": [],
   "author": "",
   "license": "ISC",
