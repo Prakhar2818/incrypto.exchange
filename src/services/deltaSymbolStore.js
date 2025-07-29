@@ -33,14 +33,15 @@ export function storeDeltaSymbolData(symbol, symbolData) {
   broadcastDashboardDataToUsers(userConnections, symbol, symbolData);
 
   broadcastPositionData(positionConnections, symbol, symbolData, "position");
-  // broadcastOrderTracking(symbol, orderTrackingConnections, symbolData, 'order-tracking-data');
-  // broadcastOrderTracking(symbol, orderTrackingConnections, symbolData, 'order-tracking-data');
   broadcastOrderTracking(
     symbol,
     orderTrackingConnections,
     symbolData,
     "order-tracking-data"
   );
+
+  // ✅ Trigger broadcast for futures and futures_symbol users
+  getDeltaSymbolData(symbol);
 }
 
 export function getDeltaSymbolData(symbol) {

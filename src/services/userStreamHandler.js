@@ -172,50 +172,50 @@ export function broadcastToUsers(userConnections, currency, date, symbol, symbol
   }
 }
 
-export function broadcastFuturesSymbolDataToUsers(userConnections, symbol, symbolData) {
-  const normalizedSymbol = normalizeToBinanceSymbol(symbol);
+// export function broadcastFuturesSymbolDataToUsers(userConnections, symbol, symbolData) {
+//   const normalizedSymbol = normalizeToBinanceSymbol(symbol);
 
-  for (const [userId, ws] of userConnections) {
-    if (ws.readyState !== 1) continue;
-    const catMap = userSubscriptions.get(userId);
-    if (!catMap || !catMap.has('futures_symbol')) continue;
-    const subscribedSymbols = catMap.get('futures_symbol');
-    if (!subscribedSymbols.has(normalizedSymbol)) continue;
+//   for (const [userId, ws] of userConnections) {
+//     if (ws.readyState !== 1) continue;
+//     const catMap = userSubscriptions.get(userId);
+//     if (!catMap || !catMap.has('futures_symbol')) continue;
+//     const subscribedSymbols = catMap.get('futures_symbol');
+//     if (!subscribedSymbols.has(normalizedSymbol)) continue;
 
-    ws.send(JSON.stringify({
-      type: 'symbol-update',
-      category: 'futures_symbol',
-      symbol: symbol.replace('USDT', 'USD'),
-      data: symbolData
-    }));
-  }
-}
+//     ws.send(JSON.stringify({
+//       type: 'symbol-update',
+//       category: 'futures_symbol',
+//       symbol: symbol.replace('USDT', 'USD'),
+//       data: symbolData
+//     }));
+//   }
+// }
 
-export function broadcastAllFuturesDataToUsers(userConnections, symbol, symbolData) {
-  const normalizedSymbol = normalizeToBinanceSymbol(symbol);
+// export function broadcastAllFuturesDataToUsers(userConnections, symbol, symbolData) {
+//   const normalizedSymbol = normalizeToBinanceSymbol(symbol);
 
-  for (const [userId, ws] of userConnections) {
-    if (ws.readyState !== 1) continue;
-    const catMap = userSubscriptions.get(userId);
-    if (!catMap || !catMap.has('futures')) continue;
+//   for (const [userId, ws] of userConnections) {
+//     if (ws.readyState !== 1) continue;
+//     const catMap = userSubscriptions.get(userId);
+//     if (!catMap || !catMap.has('futures')) continue;
 
-    const filteredData = {
-      high: symbolData?.high,
-      low: symbolData?.low,
-      underlying_asset_symbol: symbolData?.underlying_asset_symbol,
-      mark_price: symbolData?.mark_price,
-      mark_change_24h: symbolData?.mark_change_24h,
-      description: symbolData?.description?.replace(/Perpetual/gi, '').trim()
-    };
+//     const filteredData = {
+//       high: symbolData?.high,
+//       low: symbolData?.low,
+//       underlying_asset_symbol: symbolData?.underlying_asset_symbol,
+//       mark_price: symbolData?.mark_price,
+//       mark_change_24h: symbolData?.mark_change_24h,
+//       description: symbolData?.description?.replace(/Perpetual/gi, '').trim()
+//     };
 
-    ws.send(JSON.stringify({
-      type: 'symbol-update',
-      category: 'futures',
-      symbol: symbol.replace('USDT', 'USD'),
-      data: filteredData
-    }));
-  }
-}
+//     ws.send(JSON.stringify({
+//       type: 'symbol-update',
+//       category: 'futures',
+//       symbol: symbol.replace('USDT', 'USD'),
+//       data: filteredData
+//     }));
+//   }
+// }
 
 const DASHBOARD_SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT", "ADAUSDT"];
 
