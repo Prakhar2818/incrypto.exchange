@@ -21,35 +21,22 @@ function normalizeToBinanceSymbol(symbol) {
 }
 
 export function storeDeltaSymbolData(symbol, symbolData) {
-  deltaStore.set(symbol, symbolData);
+  const normalizedSymbol = normalizeToBinanceSymbol(symbol);
+  deltaStore.set(normalizedSymbol, symbolData); // Store with normalized key
 
-  // // ✅ Broadcast to users subscribed to all futures
-  // broadcastAllFuturesDataToUsers(userConnections, symbol, symbolData);
-
-  // // ✅ Broadcast to users subscribed to specific futures_symbol
-  // broadcastFuturesSymbolDataToUsers(userConnections, symbol, symbolData);
-
-  // ✅ Broadcast to dashboard users
   broadcastDashboardDataToUsers(userConnections, symbol, symbolData);
-
   broadcastPositionData(positionConnections, symbol, symbolData, "position");
-  broadcastOrderTracking(
-    symbol,
-    orderTrackingConnections,
-    symbolData,
-    "order-tracking-data"
-  );
+  broadcastOrderTracking(symbol, orderTrackingConnections, symbolData, "order-tracking-data");
 
   // ✅ Trigger broadcast for futures and futures_symbol users
-  getDeltaSymbolData(symbol);
+  getDeltaSymbolData(normalizedSymbol); // Pass normalized symbol
 }
 
 export function getDeltaSymbolData(symbol) {
-  const symbolData = deltaStore.get(symbol);
+  const normalizedSymbol = normalizeToBinanceSymbol(symbol);
+  const symbolData = deltaStore.get(normalizedSymbol); // Get with normalized key
 
   if (symbolData) {
-    const normalizedSymbol = normalizeToBinanceSymbol(symbol);
-
     for (const [userId, ws] of userConnections) {
       if (ws.readyState !== 1) continue;
       const catMap = userSubscriptions.get(userId);
@@ -68,9 +55,7 @@ export function getDeltaSymbolData(symbol) {
             underlying_asset_symbol: symbolData?.underlying_asset_symbol,
             mark_price: symbolData?.mark_price,
             mark_change_24h: symbolData?.mark_change_24h,
-            description: symbolData?.description
-              ?.replace(/Perpetual/gi, "")
-              .trim(),
+            description: symbolData?.description?.replace(/Perpetual/gi, "").trim(),
           };
         } else if (category === "futures_symbol") {
           shouldBroadcast = true;
@@ -80,19 +65,10 @@ export function getDeltaSymbolData(symbol) {
             underlying_asset_symbol: symbolData?.underlying_asset_symbol,
             mark_price: symbolData?.mark_price,
             mark_change_24h: symbolData?.mark_change_24h,
-            description: symbolData?.description
-              ?.replace(/Perpetual/gi, "")
-              .trim(),
+            description: symbolData?.description?.replace(/Perpetual/gi, "").trim(),
           };
         } else if (category === "dashboard") {
-          const DASHBOARD_SYMBOLS = [
-            "BTCUSDT",
-            "ETHUSDT",
-            "SOLUSDT",
-            "XRPUSDT",
-            "BNBUSDT",
-            "ADAUSDT",
-          ];
+          const DASHBOARD_SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT", "ADAUSDT"];
           if (DASHBOARD_SYMBOLS.includes(normalizedSymbol)) {
             shouldBroadcast = true;
             dataToSend = {
@@ -108,14 +84,12 @@ export function getDeltaSymbolData(symbol) {
         }
 
         if (shouldBroadcast) {
-          ws.send(
-            JSON.stringify({
-              type: "symbol-update",
-              category: category,
-              symbol: symbol.replace("USDT", "USD"),
-              data: dataToSend,
-            })
-          );
+          ws.send(JSON.stringify({
+            type: "symbol-update",
+            category: category,
+            symbol: symbol.replace("USDT", "USD"),
+            data: dataToSend,
+          }));
         }
       }
     }

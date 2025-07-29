@@ -57,7 +57,10 @@ function setupWebSocketConnection() {
     try {
       const parsed = JSON.parse(data);
       const symbol = parsed?.symbol;
-      storeDeltaSymbolData(symbol, parsed);
+      if (symbol) {
+        console.log(`📨 Delta WS received: ${symbol}`);
+        storeDeltaSymbolData(symbol, parsed);
+      }
     } catch (err) {
       console.error("❌ Failed to parse Delta message:", err);
     }

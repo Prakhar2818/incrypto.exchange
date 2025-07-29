@@ -204,21 +204,33 @@ export async function broadcastAllPositions(
         openedAt,
       } = pos;
 
+      console.log(`🔍 Processing position symbol: ${symbol}`);
       const normalizedSymbol = normalizeToBinanceSymbol(symbol);
+      console.log(`🔍 Normalized symbol: ${normalizedSymbol}`);
+      
       let data = {};
 
       if (isFuturesSymbol(symbol)) {
+        console.log(`📈 Futures symbol detected: ${symbol}`);
         data = getDeltaSymbolData(normalizedSymbol);
+        console.log(`📊 Delta data for ${normalizedSymbol}:`, data ? 'FOUND' : 'NOT FOUND');
       } else if (isOptionSymbol(symbol)) {
+        console.log(`📋 Option symbol detected: ${symbol}`);
         const [currency, date] = getCurrencyAndDateFromSymbol(symbol);
         data = getSymbolDataByDate(currency, date, symbol);
+        console.log(`📊 Option data for ${symbol}:`, data ? 'FOUND' : 'NOT FOUND');
       }
 
       let markPrice = Number(data?.mark_price);
       if (!markPrice || isNaN(markPrice)) {
         markPrice = Number(data?.calculated?.mark_price?.value);
       }
-      if (!markPrice || isNaN(markPrice)) return null;
+      console.log(`💰 Mark price for ${symbol}: ${markPrice}`);
+      
+      if (!markPrice || isNaN(markPrice)) {
+        console.log(`❌ No valid mark price for ${symbol}, returning null`);
+        return null;
+      }
 
       const invested = entryPrice * quantity;
       const isShort = positionType === "SHORT" || positionType === "SELL";
