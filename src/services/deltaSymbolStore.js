@@ -12,7 +12,7 @@ import {
   userConnections,
   positionConnections,
   orderTrackingConnections,
-} from "../server.js";
+} from "../../server.js";
 
 const deltaStore = new Map(); // Map<symbol, data>
 function normalizeToBinanceSymbol(symbol) {

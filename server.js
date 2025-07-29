@@ -4,19 +4,19 @@ import http from "http";
 import cors from "cors";
 import { WebSocketServer } from "ws";
 import bodyParser from "body-parser";
-import userWsRouter from "./userWsRouter.js";
+import userWsRouter from "./src/userWsRouter.js";
 import {
   fetchAndSaveSymbolsByCurrency,
   readSymbolsFromCSVsByCurrency,
-} from "./services/fetchSymbols.js";
-import { startDeltaWebSocket } from "./services/deltaWsHandler.js";
-import { startWebSocketForCurrency } from "./services/wsHandler.js";
-import config from "./config/index.js";
-import { clearCSVs } from "./utils/fileUtils.js";
+} from "./src/services/fetchSymbols.js";
+import { startDeltaWebSocket } from "./src/services/deltaWsHandler.js";
+import { startWebSocketForCurrency } from "./src/services/wsHandler.js";
+import config from "./src/config/index.js";
+import { clearCSVs } from "./src/utils/fileUtils.js";
 import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
-import { ensureDir } from "./utils/fileUtils.js";
+import { ensureDir } from "./src/utils/fileUtils.js";
 dotenv.config();
 
 const app = express();

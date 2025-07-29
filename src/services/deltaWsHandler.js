@@ -4,7 +4,6 @@ import csv from 'csv-parser';
 import { storeDeltaSymbolData, getFullDeltaMap as getDeltaSymbolDataMap } from './deltaSymbolStore.js';
 
 
-
 const WEBSOCKET_URL = "wss://socket.india.delta.exchange";
 const RECONNECT_INTERVAL = 5000; // 5 seconds
 
@@ -88,7 +87,7 @@ function attemptReconnect() {
 
 export async function startDeltaWebSocket() {
   try {
-    subscribedSymbols = await readSymbolsFromCSV('./symbol_csvs/symbols.csv');
+    subscribedSymbols = await readSymbolsFromCSV('./src/symbol_csvs/symbols.csv');
     setupWebSocketConnection();
   } catch (error) {
     console.error("❌ Failed to start Delta WebSocket:", error);
