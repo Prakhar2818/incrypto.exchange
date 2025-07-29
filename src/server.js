@@ -54,7 +54,7 @@ app.use("/", userWsRouter);
 async function initializeSymbolAndWebSocket() {
   try {
     console.log("🧹 Clearing CSV files...");
-    const csvFolderPath = path.resolve("/tmp/data");
+    const csvFolderPath = path.resolve("./data");
     ensureDir(csvFolderPath);
     try {
       clearCSVs(csvFolderPath);
